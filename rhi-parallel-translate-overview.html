@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>UE5 RHI — A Birds-Eye Introduction</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1419;
+    --panel: #1b222c;
+    --panel2: #252d38;
+    --accent: #58a6ff;
+    --accent2: #7ee787;
+    --warn: #f0883e;
+    --fence: #d2a8ff;
+    --danger: #ff7b72;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --border: #30363d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.6;
+  }
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }
+  h1 {
+    font-size: 34px;
+    margin: 0 0 6px;
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    font-size: 22px;
+    margin: 48px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent);
+  }
+  h3 {
+    font-size: 16px;
+    margin: 20px 0 8px;
+    color: var(--accent2);
+  }
+  p.lede {
+    font-size: 17px;
+    color: var(--muted);
+    margin: 0 0 28px;
+    max-width: 800px;
+  }
+  p { margin: 0 0 14px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 26px;
+    margin: 18px 0;
+  }
+  .mermaid {
+    background: var(--panel2);
+    border-radius: 8px;
+    padding: 24px;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+  }
+  code {
+    background: var(--panel2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: 13px;
+    color: var(--accent2);
+  }
+  pre {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.55;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+  }
+  .callout {
+    background: linear-gradient(135deg, rgba(88,166,255,0.10), rgba(126,231,135,0.06));
+    border-left: 3px solid var(--accent);
+    padding: 14px 20px;
+    border-radius: 4px;
+    margin: 20px 0;
+  }
+  .callout.warn {
+    background: linear-gradient(135deg, rgba(240,136,62,0.10), rgba(255,123,114,0.06));
+    border-left-color: var(--warn);
+  }
+  .callout.key {
+    background: linear-gradient(135deg, rgba(210,168,255,0.12), rgba(88,166,255,0.06));
+    border-left-color: var(--fence);
+  }
+  .callout.src {
+    background: rgba(126,231,135,0.06);
+    border-left-color: var(--accent2);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .callout.src code { color: var(--accent2); }
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  @media (max-width: 860px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+  .fix {
+    background: var(--panel2);
+    border-radius: 8px;
+    padding: 18px 22px;
+    border-top: 2px solid var(--accent);
+  }
+  .fix.b { border-top-color: var(--fence); }
+  .fix h3 { margin: 0 0 10px; font-size: 16px; color: var(--accent); }
+  .fix.b h3 { color: var(--fence); }
+  .quote {
+    font-size: 18px;
+    color: var(--text);
+    border-left: 3px solid var(--accent2);
+    padding: 8px 22px;
+    margin: 24px 0;
+    font-style: italic;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 18px;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--panel2);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  td code { font-size: 12px; }
+  nav.toc {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 22px;
+    margin: 14px 0 36px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  nav.toc a {
+    color: var(--accent);
+    text-decoration: none;
+    display: inline-block;
+    margin-right: 20px;
+    margin-bottom: 4px;
+  }
+  nav.toc a:hover { text-decoration: underline; }
+  footer {
+    margin-top: 72px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>UE5 RHI — A Birds-Eye Introduction</h1>
+<p class="lede">A conceptual map of the Rendering Hardware Interface: how recording and translation are split across threads, how parallel translation turns one command stream into concurrent work, and how <code>RHIThreadFence</code> keeps shared state from racing. Intended as a map to help engineers read the RHI source — specifics live in the code.</p>
+
+<nav class="toc">
+  <a href="#pipeline">1. The pipeline at 30,000 feet</a>
+  <a href="#immediate">2. The immediate list</a>
+  <a href="#pipes">3. Top-of-pipe vs bottom-of-pipe</a>
+  <a href="#chunks">4. Where the stream gets chopped</a>
+  <a href="#shared">5. Shared state — the rare hazard</a>
+  <a href="#fences">6. Fences: happens-before in the task graph</a>
+  <a href="#join">7. Fences are one-sided joins</a>
+  <a href="#when">8. When to add a fence</a>
+  <a href="#lambdas">9. EnqueueLambda and MultiPipe</a>
+  <a href="#model">10. The mental model</a>
+  <a href="#tldr">11. One sentence</a>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="pipeline">1. The pipeline at 30,000 feet</h2>
+<p>A frame in UE5 moves through four distinct phases, each on its own thread context. Understanding this split is the foundation for everything else.</p>
+
+<div class="panel">
+<div class="mermaid">
+flowchart LR
+    GT["GameThread<br/>produces frame data"]:::gt
+    RT["RenderThread<br/>records commands"]:::rt
+    W["Translator workers<br/>high-level &rarr; native API"]:::worker
+    RHI["RHIThread<br/>submits to driver"]:::rhi
+    GPU["GPU"]:::gpu
+
+    GT -- "ENQUEUE_RENDER_COMMAND" --> RT
+    RT -- "Submit()" --> W
+    W -- "native cmd bufs" --> RHI
+    RHI --> GPU
+
+    classDef gt fill:#2d3745,stroke:#58a6ff,color:#e6edf3
+    classDef rt fill:#1b3a5c,stroke:#58a6ff,color:#e6edf3
+    classDef worker fill:#1d3f1f,stroke:#7ee787,color:#e6edf3
+    classDef rhi fill:#4a2e15,stroke:#f0883e,color:#e6edf3
+    classDef gpu fill:#4a1a17,stroke:#ff7b72,color:#e6edf3
+</div>
+</div>
+
+<ul>
+  <li><strong>GameThread</strong> runs gameplay, queues work for the renderer via <code>ENQUEUE_RENDER_COMMAND</code>.</li>
+  <li><strong>RenderThread</strong> translates gameplay intent into RHI calls. It doesn't touch the GPU directly — it records a linear <em>plan</em> into a command list.</li>
+  <li><strong>Translator workers</strong> walk the recorded stream and populate platform-native command buffers (D3D12, Vulkan, Metal, NVN, AGC, &hellip;). This is where "parallel translate" lives &mdash; nothing is submitted to the driver yet, just recorded into native buffers.</li>
+  <li><strong>RHIThread</strong> submits those finished native buffers to the platform driver. Only at submit do driver-visible operations actually begin.</li>
+</ul>
+
+<div class="callout">
+<strong>The key split:</strong> recording is serial (one RenderThread), execution is parallel (many translator workers). Commands are queued top-of-pipe and executed bottom-of-pipe — the entire RHI vocabulary is built around that distinction.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="immediate">2. The immediate list — the frame's spine</h2>
+<p>There's one command list that defines a frame's canonical ordering: <code>FRHICommandListImmediate</code>, a persistent singleton owned by the executor (not recreated per frame — reset and reused). The RenderThread holds a reference to it and records into it directly.</p>
+
+<div class="panel">
+<div class="mermaid">
+flowchart TB
+    subgraph IM ["FRHICommandListImmediate &mdash; single-threaded conductor"]
+      direction TB
+      D1["direct cmd"]:::serial
+      D2["direct cmd"]:::serial
+      Q1["QueueAsync( sub-list A )"]:::branch
+      Q2["QueueAsync( sub-list B )"]:::branch
+      Q3["QueueAsync( sub-list C )"]:::branch
+      D3["direct cmd"]:::serial
+      D1 --> D2 --> Q1 --> Q2 --> Q3 --> D3
+    end
+    subgraph SUB ["Sub-command-lists &mdash; parallel-eligible branches"]
+      A["FRHICommandList A"]:::worker
+      B["FRHICommandList B"]:::worker
+      C["FRHICommandList C"]:::worker
+    end
+    Q1 -. builds .-> A
+    Q2 -. builds .-> B
+    Q3 -. builds .-> C
+
+    classDef serial fill:#1b3a5c,stroke:#58a6ff,color:#e6edf3
+    classDef branch fill:#3b2a55,stroke:#d2a8ff,color:#e6edf3
+    classDef worker fill:#1d3f1f,stroke:#7ee787,color:#e6edf3
+</div>
+</div>
+
+<h3>Two kinds of command list</h3>
+<ul>
+  <li><strong>The immediate list</strong> — one per frame, always single-threaded for legacy reasons. It's the trunk: it holds the canonical ordering, the global fences, and any work the renderer recorded without explicitly asking for parallelism.</li>
+  <li><strong>Non-immediate sub-command-lists</strong> — the renderer builds these explicitly (typically inside a parallel render pass) and queues them onto the immediate list with <code>QueueAsyncCommandListSubmit</code>. These <em>are</em> eligible for parallel translation.</li>
+</ul>
+
+<p><strong>So parallel translate is not the executor secretly splitting the immediate list behind the renderer's back.</strong> It's the renderer deliberately carving work off into sub-lists that the executor can then translate in parallel — while the immediate-recorded work stays on a single-threaded chain.</p>
+
+<div class="callout src">
+<strong>Where to look:</strong> the class chain is <code>FRHICommandListBase</code> &rarr; <code>FRHIComputeCommandList</code> &rarr; <code>FRHICommandList</code> &rarr; <code>FRHICommandListImmediate</code> &mdash; each a strict derivation of the previous, with the immediate subclass flagged via <code>PersistentState.bImmediate</code>. The singleton lives in <code>FRHICommandListExecutor::GRHICommandList.CommandListImmediate</code>, fetched via <code>FRHICommandListImmediate::Get()</code>. Sub-command-lists are queued onto it with <code>QueueAsyncCommandListSubmit</code>.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="pipes">3. Top-of-pipe vs bottom-of-pipe</h2>
+<p>This pair of terms shows up everywhere in the RHI source. They name the two halves of the recording/execution split.</p>
+
+<div class="two-col">
+  <div class="fix">
+    <span class="tag">Top-of-pipe</span>
+    <h3>When commands are recorded</h3>
+    <p>You're on the RenderThread. The command list is being <em>written into</em>. Nothing has translated or executed yet. <code>RHICmdList.IsTopOfPipe()</code> returns true.</p>
+    <p>Calls like <code>SetShader</code>, <code>DrawIndexedPrimitive</code>, <code>CreateShaderResourceView</code> append entries to the stream. A lambda passed to <code>EnqueueLambda</code> has been queued, but its body hasn't run.</p>
+  </div>
+  <div class="fix b">
+    <span class="tag">Bottom-of-pipe</span>
+    <h3>When commands execute</h3>
+    <p>A translator worker has picked up a chunk of the stream and is walking it. Each recorded command's <code>Execute()</code> runs, including any lambda bodies. <code>RHICmdList.IsBottomOfPipe()</code> returns true.</p>
+    <p>This is where native-API calls actually happen and where fence events actually signal. Also the context in which deferred resource deletion runs.</p>
+  </div>
+</div>
+
+<div class="panel">
+<div class="mermaid">
+flowchart LR
+    subgraph TOP ["Top-of-pipe &mdash; record time"]
+      direction TB
+      T1["append cmd"]:::rt
+      T2["append &lambda;"]:::rt
+      T3["append fence marker"]:::fence
+      T1 --> T2 --> T3
+    end
+    subgraph BOT ["Bottom-of-pipe &mdash; execute time"]
+      direction TB
+      B1["translate cmd &rarr; native"]:::worker
+      B2["run &lambda; body"]:::worker
+      B3["signal fence event"]:::fence
+      B1 --> B2 --> B3
+    end
+    TOP -- "submit + dispatch" --> BOT
+
+    classDef rt fill:#1b3a5c,stroke:#58a6ff,color:#e6edf3
+    classDef worker fill:#1d3f1f,stroke:#7ee787,color:#e6edf3
+    classDef fence fill:#3b2a55,stroke:#d2a8ff,color:#e6edf3
+</div>
+</div>
+
+<div class="callout key">
+<strong>Rule of thumb:</strong> anything that observes or mutates live GPU-side state happens <em>bottom-of-pipe</em>. Anything that describes what the GPU will eventually do happens <em>top-of-pipe</em>. <code>EnqueueLambda</code> is the bridge — recorded top-of-pipe, executed bottom-of-pipe.
+</div>
+
+<div class="callout src">
+<strong>Bypass mode:</strong> with <code>r.RHICmdBypass=1</code> there is no deferred pipeline at all — every command executes inline on the calling thread, and <code>IsBottomOfPipe()</code> is true at record time too. Useful for debugging; slower in general.
+</div>
+
+<h3>Why code checks which side it's on</h3>
+<p>Once you know the vocabulary, the checks you see sprinkled through the RHI source fall into three clear patterns. Knowing which one you're looking at tells you a lot about a method's contract.</p>
+
+<table>
+  <thead>
+    <tr><th style="width:34%">Pattern</th><th>What the branch means</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>if (Bypass()) { &hellip; } else ALLOC_COMMAND(&hellip;)</code></td>
+      <td><strong>Top-of-pipe entry with a bypass shortcut.</strong> In normal mode the method records a command to run later; in bypass mode there's no deferred pipeline, so it runs inline right now. The method is not intended to be called from inside a lambda body.</td>
+    </tr>
+    <tr>
+      <td><code>if (IsBottomOfPipe()) { &hellip; } else ALLOC_COMMAND(&hellip;)</code></td>
+      <td><strong>Genuinely dual-purpose.</strong> Safe to call from either record time or execution time. If the caller is already inside a lambda, run inline; otherwise record. <code>EnqueueLambda</code> is the archetype.</td>
+    </tr>
+    <tr>
+      <td><code>checkf(IsTopOfPipe() || Bypass(), &hellip;)</code></td>
+      <td><strong>Record-time only.</strong> This method describes deferred work and makes no sense to call once deferral has started. Reject the caller loudly. Applied to <code>RHIThreadFence</code>, <code>EnqueueLambdaMultiPipe</code>, buffer <code>Lock/Unlock</code>, etc.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout key">
+<strong>The predicate relationship that ties it together:</strong>
+<pre style="margin:10px 0 4px">IsBottomOfPipe()  =  Bypass() || IsExecuting()
+IsTopOfPipe()     =  !IsBottomOfPipe()</pre>
+So <code>IsTopOfPipe()</code> is false in two situations: bypass mode, and while a previously-recorded command is actually executing. A method gated by <code>IsTopOfPipe() || Bypass()</code> accepts bypass but rejects mid-execution. A method branching on <code>IsBottomOfPipe()</code> embraces both.
+</div>
+
+<h3>A second reason: lifetime-aware optimisations</h3>
+<p>Beyond gating what's legal, some methods use the distinction to <strong>decide whether captured data needs to be copied into the command list's arena</strong>. If execution will be deferred, caller-stack memory won't survive; if the lambda will run inline, it will. A typical shape:</p>
+
+<pre>TConstArrayView&lt;FooResource&gt; Captured =
+    RHICmdList.IsTopOfPipe()
+        ? RHICmdList.AllocArray(Input)   <span style="color:var(--muted)">// deferred: copy into arena that outlives this call</span>
+        : Input;                         <span style="color:var(--muted)">// inline: caller's stack is still alive</span>
+
+RHICmdList.EnqueueLambdaMultiPipe(..., [Captured](...) { ... });</pre>
+
+<div class="callout">
+<strong>So the mental rule:</strong> an <code>IsTopOfPipe()</code> branch in an otherwise dual-mode method usually isn't about <em>legality</em> — it's about <em>lifetime</em>. "Will this capture still be valid when the lambda runs? If execution is deferred, no — copy it into the arena. If execution is immediate, yes — pass it through."
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="chunks">4. Where the stream gets chopped</h2>
+<p>At submit time the executor chops the queued command lists into translator-task chunks. A few simple questions decide whether the next list appends to the current chunk or starts a new one.</p>
+
+<div class="two-col">
+  <div class="fix">
+    <span class="tag">Safety</span>
+    <h3>Can this list translate in parallel at all?</h3>
+    <p>Some lists are flagged as needing single-threaded translation — anything that will mutate shared RHI state, the immediate list itself, plus a few platform-specific opt-outs. Those run alone; the chain splits on either side.</p>
+  </div>
+  <div class="fix b">
+    <span class="tag">Size</span>
+    <h3>Has this chunk grown too large?</h3>
+    <p>A command-count ceiling keeps any single translator task from becoming a stall point. Once a chunk fills up, the next list opens a fresh one.</p>
+  </div>
+  <div class="fix">
+    <span class="tag">Mode</span>
+    <h3>Does the next list change the translation mode?</h3>
+    <p>Parallel chains and single-threaded chains don't mix. When the next list's mode differs from the current chain's, a split is forced.</p>
+  </div>
+  <div class="fix b">
+    <span class="tag">Structure</span>
+    <h3>Are we crossing a render-pass boundary?</h3>
+    <p>Parallel render passes translate as child tasks of a parent list. Entering or leaving that parent/child relationship always starts a new chain so the task graph can wire up the right dependencies.</p>
+  </div>
+</div>
+
+<div class="panel">
+<div class="mermaid">
+flowchart LR
+    S[["next list"]]:::decide
+    Q{"safe? &nbsp; sized right?<br/>same mode? &nbsp; same structure?"}:::decide
+    APP["append to<br/>current chunk"]:::ok
+    NEW["close chunk,<br/>start a new one"]:::split
+
+    S --> Q
+    Q -- "all yes" --> APP
+    Q -- "any no" --> NEW
+
+    classDef decide fill:#2d3745,stroke:#8b949e,color:#e6edf3
+    classDef ok fill:#1d3f1f,stroke:#7ee787,color:#e6edf3
+    classDef split fill:#3b2a55,stroke:#d2a8ff,color:#e6edf3
+</div>
+</div>
+
+<div class="callout key">
+<strong>One implication worth remembering:</strong> recording an <code>RHIThreadFence(true)</code> anywhere on a list marks that list as "mutates shared state" and <em>demotes the whole list</em> to single-threaded translation — not just the commands around the fence. For narrow mutations, put the fenced work on a small dedicated sub-list so the rest of the frame stays parallel.
+</div>
+
+<div class="callout src">
+<strong>Where to look:</strong> the veto is <code>AllowParallelTranslate()</code>. The split predicates live in the executor's submit path. CVars under <code>r.RHICmd.ParallelTranslate.*</code> control the master switch, chunk size ceiling, and a few relaxation knobs; <code>GRHISupportsParallelRHIExecute</code> is the platform gate.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="shared">5. Shared state — the rare hazard</h2>
+<p>Most RHI commands only touch <em>local</em> state: the worker's own native command buffer, its own scratch allocator. Two workers translating two different chunks don't look at each other's memory — so they can't race. <strong>Parallel-safety is the default</strong>, not something fences manufacture.</p>
+
+<div class="panel">
+<div class="mermaid">
+flowchart TB
+    subgraph A ["Worker A &mdash; chunk 1"]
+      A1["local cmd buf A"]:::local
+      A2["local scratch A"]:::local
+    end
+    subgraph B ["Worker B &mdash; chunk 2"]
+      B1["local cmd buf B"]:::local
+      B2["local scratch B"]:::local
+    end
+    subgraph S ["Shared state (the rare case)"]
+      S1["view linked lists"]:::shared
+      S2["bindless tables"]:::shared
+      S3["allocator bookkeeping"]:::shared
+    end
+    A -. "most cmds don't touch" .-> S
+    B -. "most cmds don't touch" .-> S
+
+    classDef local fill:#1d3f1f,stroke:#7ee787,color:#e6edf3
+    classDef shared fill:#4a2e15,stroke:#f0883e,color:#e6edf3
+</div>
+</div>
+
+<p>A few commands <em>do</em> touch shared state — inserting into a resource-view linked list, freeing a bindless handle, walking a rename list during defrag. If chunk A mutates and chunk B walks, concurrent translation races. Two clean fixes exist.</p>
+
+<div class="two-col">
+  <div class="fix">
+    <span class="tag">Fix A</span>
+    <h3>Lock it</h3>
+    <p>Take a critical section around every mutate and every walk. Any chunk can touch shared state safely; contention is handled at runtime.</p>
+    <p><em>Example:</em> D3D12's view rename-listener list with <code>FCriticalSection</code>.</p>
+  </div>
+  <div class="fix b">
+    <span class="tag">Fix B</span>
+    <h3>Sequence it</h3>
+    <p>Force the mutator chunk to finish before any later chunk starts. No lock needed — the schedule itself keeps them apart.</p>
+    <p><em>Example:</em> NVN and AGC view linked lists, guarded by <code>EnqueueLambda</code> + <code>RHIThreadFence(true)</code>.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="fences">6. Fences: happens-before in the task graph</h2>
+<p>A fence is not a gate the RHI thread polls. It's a <strong>happens-before edge injected into the task graph</strong>.</p>
+
+<ol>
+  <li>At record time, the fence creates a <strong>signal token</strong> (a graph event) and drops a marker into the command stream.</li>
+  <li>At submit time, every chunk enqueued <em>after</em> the marker is <strong>born with a prerequisite</strong> on that token — before it even starts.</li>
+  <li>When the chunk containing the marker runs, it flips the token from pending to signalled. Only then does the scheduler release the dependent chunks.</li>
+</ol>
+
+<div class="callout key">
+Nothing scheduled after the fence exists in the scheduler's eyes until the signal fires. That's the whole mechanism — no locks, no polling.
+</div>
+
+<div class="callout src">
+<strong>Where to look:</strong> <code>FRHICommandListBase::RHIThreadFence(bool bSetLockFence)</code> allocates an <code>FGraphEventRef</code>, wraps it in a command, and (if <code>bSetLockFence</code> is true) stashes it so every future translate task takes it as a prerequisite. The command's <code>Execute()</code> calls <code>DispatchSubsequents()</code> to signal.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="join">7. Fences are one-sided joins</h2>
+<p>This is the nuance that trips people up. A fence does <strong>not</strong> gather all prior work like a fork-join barrier. It only waits on the specific chunk containing the fence marker.</p>
+
+<div class="panel">
+<div class="mermaid">
+flowchart LR
+    A["chunk A<br/>(unrelated draws)"]:::worker
+    B["chunk B<br/>(unrelated draws)"]:::worker
+    C["chunk C<br/>&lambda; mutate shared<br/>RHIThreadFence(true) &#x2691;"]:::fence
+    D["chunk D<br/>(gated)"]:::blocked
+    E["chunk E<br/>(gated)"]:::blocked
+
+    A -. "still running" .-> A
+    B -. "still running" .-> B
+    C -- "signal" --> D
+    C -- "signal" --> E
+
+    classDef worker fill:#1d3f1f,stroke:#7ee787,color:#e6edf3
+    classDef fence fill:#3b2a55,stroke:#d2a8ff,color:#e6edf3
+    classDef blocked fill:#3a1f1f,stroke:#ff7b72,color:#e6edf3
+</div>
+</div>
+
+<ul>
+  <li><strong>Pre-fence chunks</strong> keep running concurrently. The fence doesn't collect them. A and B may still be in flight long after C signals.</li>
+  <li><strong>Fence chunk</strong> runs normally and signals the token when it reaches the marker.</li>
+  <li><strong>Post-fence chunks</strong> are the only ones gated. They inherit the prereq at enqueue time and can't start until the signal fires.</li>
+</ul>
+
+<div class="callout warn">
+<strong>If you need a true barrier</strong> — "all prior work done, then continue" — a fence isn't the tool. Use a submit boundary or full flush.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="when">8. When to add a fence</h2>
+<p><strong>Whenever a lambda writes state that later recorded commands will read</strong>, and the write and the read could end up in different translator chunks.</p>
+
+<div class="two-col">
+  <div class="fix">
+    <span class="tag">Add a fence</span>
+    <h3>Yes — use <code>RHIThreadFence(true)</code></h3>
+    <ul>
+      <li>Creating a resource view that later draws will bind — the view needs to appear in the resource's view list before any rename walk runs.</li>
+      <li>Allocating a shared descriptor slot (bindless, sampler table) that subsequent bindings will index.</li>
+      <li>Registering a transient-resource alias that later commands need to see.</li>
+      <li>Deferred init of persistent state — building an acceleration structure whose pointer is cached and used by later dispatches.</li>
+      <li>Any lambda that mutates RHI-side data another chunk will later read.</li>
+    </ul>
+  </div>
+  <div class="fix b">
+    <span class="tag">Skip the fence</span>
+    <h3>No — it would serialise for nothing</h3>
+    <ul>
+      <li>Pure draw / bind / dispatch sequences — only touch the worker's own native command buffer.</li>
+      <li>Lambdas whose effects are local (scratch cleanup, logging, per-chunk bookkeeping).</li>
+      <li>Setting platform-specific context state scoped to the current command buffer.</li>
+      <li>Resource creation where no command this frame reads the result — the next submit's boundary syncs you.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="callout">
+<strong>Decision test:</strong> "could the read-side of my state land in a sibling chunk that the scheduler is free to start concurrently?" If yes, fence. If the read is ordered by GPU command-buffer semantics or by a submit boundary, no fence needed.
+</div>
+
+<div class="callout warn">
+<strong>Over-fencing is a real cost.</strong> Every <code>RHIThreadFence(true)</code> serialises future translators and demotes its own list to single-threaded translation (see §4). Sprinkling them "just in case" collapses the parallelism you enabled. Reach for a lock when contention is rare and narrow.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="lambdas">9. <code>EnqueueLambda</code> and <code>EnqueueLambdaMultiPipe</code></h2>
+<p>These are the two ways to inject arbitrary code into the RHI pipeline.</p>
+
+<h3><code>EnqueueLambda</code> — the common case</h3>
+<p>Records a lambda into the stream at top-of-pipe; the lambda body runs at bottom-of-pipe on whichever translator owns the chunk. The lambda receives the command list and can access its active context.</p>
+
+<p>It doesn't hardcode a pipeline. The command list tracks which pipeline is active at any moment (<code>Graphics</code> or <code>AsyncCompute</code>) via <code>SwitchPipeline</code>, typically inside an RAII scope. A lambda runs with whatever pipeline was active at record time — usually <code>Graphics</code>, sometimes <code>AsyncCompute</code> inside an async-compute scope. Inside the lambda, <code>GetContext()</code> asserts exactly one pipeline is active.</p>
+
+<h3><code>EnqueueLambdaMultiPipe</code> — crossing the graphics / async-compute divide</h3>
+<p>Same idea, but activates <em>both</em> pipelines simultaneously for the duration of the command. The lambda receives an <code>FRHIContextArray</code> indexed by pipeline, so you can issue work against both contexts in one recorded operation.</p>
+
+<div class="panel">
+<div class="mermaid">
+flowchart TB
+    RT["RenderThread records<br/>EnqueueLambdaMultiPipe"]:::rt
+    subgraph BOT ["Bottom-of-pipe &mdash; lambda receives FRHIContextArray"]
+      direction LR
+      GFX["Graphics context"]:::gfx
+      AC["AsyncCompute context"]:::ac
+    end
+    L["&lambda; body runs once,<br/>sees both contexts in the array"]:::lambda
+    RT --> L
+    L --> GFX
+    L --> AC
+
+    classDef rt fill:#1b3a5c,stroke:#58a6ff,color:#e6edf3
+    classDef gfx fill:#1d3f1f,stroke:#7ee787,color:#e6edf3
+    classDef ac fill:#4a2e15,stroke:#f0883e,color:#e6edf3
+    classDef lambda fill:#3b2a55,stroke:#d2a8ff,color:#e6edf3
+</div>
+</div>
+
+<table>
+  <thead>
+    <tr><th>Call</th><th>Active-pipeline constraint</th><th>Typical use</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>EnqueueLambda</code></td>
+      <td>Exactly <strong>one</strong> pipeline must be active at execution time — whichever the stream is on.</td>
+      <td>Injecting work into graphics or async-compute (but not both) — the 95% case.</td>
+    </tr>
+    <tr>
+      <td><code>EnqueueLambdaMultiPipe</code></td>
+      <td>Can activate <strong>both</strong> pipelines for the command's duration.</td>
+      <td>Recording a single operation that must touch both pipes — cross-pipe transitions, bindless registration visible to both queues, per-pipe view invalidation.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout">
+<strong>MultiPipe has an optional built-in fence.</strong> Passing <code>EThreadFence::Enabled</code> auto-appends a <code>RHIThreadFence(true)</code> — the common case, because MultiPipe lambdas usually mutate shared state both pipes will observe.
+</div>
+
+<div class="callout warn">
+<strong>Not to be confused with MGPU.</strong> "MultiPipe" means multiple queues on one GPU (graphics + async compute). Multi-GPU (alternate-frame rendering, linked adapters) is a separate mechanism layered on top — <code>FRHIGPUMask</code>, linked-adapter objects, etc.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="model">10. The mental model</h2>
+
+<pre>   RECORD                                        EXECUTE
+   ──────                                        ───────
+
+   one immediate          harvested,           translator workers
+   RHICmdList +           chopped into         run chunks in parallel,
+   queued sub-lists       task chunks          except where fences
+                                               inject dependencies
+
+   [cmd][cmd][λ][⚑][cmd][cmd][cmd]
+         │    │   │
+         │    │   └── births a graph event; every chunk
+         │    │       enqueued after this inherits a
+         │    │       wait-on-event prereq
+         │    │
+         │    └── runs on whichever worker owns its chunk
+         │
+         └── just another entry in the stream</pre>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="tldr">11. One sentence</h2>
+<blockquote class="quote">
+The RenderThread records a frame-wide plan into one immediate command list; the executor chops that plan (plus any explicitly queued sub-lists) into chunks that translator workers convert to native API calls concurrently; fences are the task-graph edges that retroactively introduce ordering when a lambda needs to mutate shared state without racing what comes next.
+</blockquote>
+
+<footer>
+  An introduction, not a reference. Specifics — flag names, CVar defaults, platform caveats — live in the RHI source under <code>Engine/Source/Runtime/RHI/</code> and per-platform backends under <code>Engine/Platforms/*/Source/Runtime/</code>.
+</footer>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      darkMode: true,
+      background: '#1b222c',
+      primaryColor: '#1b3a5c',
+      primaryTextColor: '#e6edf3',
+      primaryBorderColor: '#58a6ff',
+      lineColor: '#8b949e',
+      fontSize: '14px'
+    },
+    flowchart: { curve: 'basis', padding: 20 }
+  });
+</script>
+
+</body>
+</html>
