@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>UE5 RHI Transitions — A Birds-Eye Introduction</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1419;
+    --panel: #1b222c;
+    --panel2: #252d38;
+    --accent: #58a6ff;
+    --accent2: #7ee787;
+    --warn: #f0883e;
+    --fence: #d2a8ff;
+    --danger: #ff7b72;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --border: #30363d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.6;
+  }
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }
+  h1 {
+    font-size: 34px;
+    margin: 0 0 6px;
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    font-size: 22px;
+    margin: 48px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent);
+  }
+  h3 {
+    font-size: 16px;
+    margin: 20px 0 8px;
+    color: var(--accent2);
+  }
+  p.lede {
+    font-size: 17px;
+    color: var(--muted);
+    margin: 0 0 28px;
+    max-width: 800px;
+  }
+  p { margin: 0 0 14px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 26px;
+    margin: 18px 0;
+  }
+  .mermaid {
+    background: var(--panel2);
+    border-radius: 8px;
+    padding: 24px;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+  }
+  code {
+    background: var(--panel2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: 13px;
+    color: var(--accent2);
+  }
+  pre {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.55;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+  }
+  .callout {
+    background: linear-gradient(135deg, rgba(88,166,255,0.10), rgba(126,231,135,0.06));
+    border-left: 3px solid var(--accent);
+    padding: 14px 20px;
+    border-radius: 4px;
+    margin: 20px 0;
+  }
+  .callout.warn {
+    background: linear-gradient(135deg, rgba(240,136,62,0.10), rgba(255,123,114,0.06));
+    border-left-color: var(--warn);
+  }
+  .callout.key {
+    background: linear-gradient(135deg, rgba(210,168,255,0.12), rgba(88,166,255,0.06));
+    border-left-color: var(--fence);
+  }
+  .callout.src {
+    background: rgba(126,231,135,0.06);
+    border-left-color: var(--accent2);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .callout.src code { color: var(--accent2); }
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  @media (max-width: 860px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+  .fix {
+    background: var(--panel2);
+    border-radius: 8px;
+    padding: 18px 22px;
+    border-top: 2px solid var(--accent);
+  }
+  .fix.b { border-top-color: var(--fence); }
+  .fix h3 { margin: 0 0 10px; font-size: 16px; color: var(--accent); }
+  .fix.b h3 { color: var(--fence); }
+  .quote {
+    font-size: 18px;
+    color: var(--text);
+    border-left: 3px solid var(--accent2);
+    padding: 8px 22px;
+    margin: 24px 0;
+    font-style: italic;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 18px;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--panel2);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  td code { font-size: 12px; }
+  nav.toc {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 22px;
+    margin: 14px 0 36px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  nav.toc a {
+    color: var(--accent);
+    text-decoration: none;
+    display: inline-block;
+    margin-right: 20px;
+    margin-bottom: 4px;
+  }
+  nav.toc a:hover { text-decoration: underline; }
+  footer {
+    margin-top: 72px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>UE5 RHI Transitions — A Birds-Eye Introduction</h1>
+<p class="lede">How UE5 describes resource state changes in a platform-agnostic way, why the concept exists at all, and how those descriptions turn into <code>ID3D12GraphicsCommandList::ResourceBarrier</code> / <code>vkCmdPipelineBarrier</code> calls in the driver's command buffers. A conceptual map to help engineers read the RHI transition source — specifics live in the code.</p>
+
+<nav class="toc">
+  <a href="#why">1. Why transitions exist</a>
+  <a href="#model">2. The RHI transition model</a>
+  <a href="#access">3. Access modes: the vocabulary</a>
+  <a href="#lifecycle">4. Split-phase lifecycle</a>
+  <a href="#subres">5. Per-subresource granularity</a>
+  <a href="#xpipe">6. Cross-pipe transitions</a>
+  <a href="#driver">7. How it reaches the driver</a>
+  <a href="#implicit">8. What the RHI does NOT do for you</a>
+  <a href="#aliasing">9. Aliasing barriers for transient resources</a>
+  <a href="#rdg">10. Who writes transitions (usually not you)</a>
+  <a href="#mental">11. The mental model</a>
+  <a href="#tldr">12. One sentence</a>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="why">1. Why transitions exist at all</h2>
+<p>Modern GPUs don't just execute draw calls serially against a single coherent memory view. They have:</p>
+
+<ul>
+  <li><strong>Pipelined hardware</strong> — vertex, pixel, compute, raster, ROP, and copy units all run in flight at once. One stage writing while another reads the same memory is a hazard unless you tell the GPU to wait.</li>
+  <li><strong>Layered caches</strong> — L1, L2, ROP caches, texture caches. Data written through one path isn't automatically visible through another until caches are flushed/invalidated.</li>
+  <li><strong>Compressed texture formats</strong> — a GPU may store a render target in an internal compressed form while it's an RTV, but must decompress it before shader reads. The driver needs a signal for when to switch.</li>
+  <li><strong>Multiple queues</strong> — graphics and async compute can run on separate hardware engines with separate caches and separate command submissions. A resource written on one queue needs explicit synchronisation before it's safe to read on another.</li>
+</ul>
+
+<p>The driver can't infer these requirements from command-buffer content alone. Someone has to <em>tell</em> it: "this resource was a render target, now it needs to be an SRV — insert the right caches flush / decompress / queue wait." That's what a barrier is. What UE5 calls a <strong>transition</strong> is its platform-agnostic description of such a barrier.</p>
+
+<div class="callout">
+<strong>The RHI's job:</strong> accept a high-level "before state → after state" declaration from the renderer, and emit whatever sequence of native barriers / fences / cache ops the platform requires to make it correct.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="model">2. The RHI transition model — declarations, not barriers</h2>
+<p>An <code>FRHITransition</code> is not a barrier. It's a <em>declaration</em> of a state change that the RHI will translate into whatever native barrier sequence the platform needs.</p>
+
+<div class="panel">
+<div class="mermaid">
+flowchart LR
+    R["renderer declares:<br/>&lsquo;Tex from RTV to SRV&rsquo;"]:::rt
+    T["FRHITransition<br/>platform-agnostic record"]:::transition
+    B["backend emits native barriers:<br/>D3D12 ResourceBarrier,<br/>vkCmdPipelineBarrier,<br/>etc."]:::backend
+    GPU["populated native<br/>command buffer"]:::gpu
+
+    R --> T --> B --> GPU
+
+    classDef rt fill:#1b3a5c,stroke:#58a6ff,color:#e6edf3
+    classDef transition fill:#3b2a55,stroke:#d2a8ff,color:#e6edf3
+    classDef backend fill:#4a2e15,stroke:#f0883e,color:#e6edf3
+    classDef gpu fill:#4a1a17,stroke:#ff7b72,color:#e6edf3
+</div>
+</div>
+
+<h3>The three things a transition describes</h3>
+<ul>
+  <li><strong>What's changing</strong> — one or more <code>FRHITransitionInfo</code> entries, each naming a resource, an "access before" and "access after", and optionally a subresource range.</li>
+  <li><strong>Between which pipes</strong> — source and destination <code>ERHIPipeline</code> flags (graphics, async compute, or both). This tells the RHI whether a cross-queue fence is involved.</li>
+  <li><strong>Creation flags</strong> — optional hints like <code>NoFence</code>, <code>AllowDecayPipelines</code>, <code>MaintainCompression</code> that modify the RHI's choices.</li>
+</ul>
+
+<div class="callout src">
+<strong>Where to look:</strong> <code>FRHITransitionInfo</code>, <code>FRHITransitionCreateInfo</code>, and <code>FRHITransition</code> live in <code>Engine/Source/Runtime/RHI/Public/RHITransition.h</code>. Access flags are in <code>RHIAccess.h</code>. Pipeline flags are in <code>RHIPipeline.h</code>.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="access">3. Access modes — <code>ERHIAccess</code></h2>
+<p>A bitmask that names every way a resource can be read or written. The transition's "before" and "after" are both <code>ERHIAccess</code> values — the backend translates the pair into the right native barrier.</p>
+
+<table>
+  <thead>
+    <tr><th>Category</th><th>Example modes</th><th>What it means</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Read-only</td>
+      <td><code>SRVCompute</code>, <code>SRVGraphicsPixel</code>, <code>SRVGraphicsNonPixel</code>, <code>VertexOrIndexBuffer</code>, <code>IndirectArgs</code>, <code>CopySrc</code>, <code>Present</code>, <code>DSVRead</code>, <code>BVHRead</code></td>
+      <td>Resource is being read by one or more stages. Multiple read modes can coexist.</td>
+    </tr>
+    <tr>
+      <td>Read-write</td>
+      <td><code>UAVCompute</code>, <code>UAVGraphics</code>, <code>RTV</code>, <code>CopyDest</code>, <code>DSVWrite</code>, <code>BVHWrite</code></td>
+      <td>Resource is being written. Usually exclusive &mdash; only one writer at a time.</td>
+    </tr>
+    <tr>
+      <td>Transient</td>
+      <td><code>Discard</code></td>
+      <td>Contents are undefined / no access required. Used by transient allocator (see §9).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>"From SRV to UAV" is the common pattern for a texture about to be written by a compute pass; "from RTV to SRV" is the pattern for a render target that a later pass will sample; "from Present to RTV" is the start-of-frame transition on the back buffer.</p>
+
+<div class="callout key">
+<strong>Read-mode bits are additive.</strong> A resource in <code>SRVCompute | SRVGraphicsPixel</code> means "readable from compute shaders and pixel shaders simultaneously." Write modes are typically exclusive. When you see a transition that looks like "from (SRV | UAV) to (SRV)", it's saying "we were writable and readable, now we're read-only" — the RHI knows to flush the UAV caches.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="lifecycle">4. Split-phase lifecycle — begin, work, end</h2>
+<p>Transitions are issued as two separate commands around the work that depends on the new state.</p>
+
+<div class="panel">
+<div class="mermaid">
+flowchart LR
+    C["RHICreateTransition<br/>(allocate record)"]:::step1
+    B["RHIBeginTransitions<br/>(insert BEGIN barrier)"]:::step2
+    W["draw / dispatch work<br/>(uses new state)"]:::step3
+    E["RHIEndTransitions<br/>(insert END barrier)"]:::step4
+
+    C --> B --> W --> E
+
+    classDef step1 fill:#3b2a55,stroke:#d2a8ff,color:#e6edf3
+    classDef step2 fill:#1b3a5c,stroke:#58a6ff,color:#e6edf3
+    classDef step3 fill:#1d3f1f,stroke:#7ee787,color:#e6edf3
+    classDef step4 fill:#4a2e15,stroke:#f0883e,color:#e6edf3
+</div>
+</div>
+
+<p>This two-phase model is the mechanism for <strong>split barriers</strong>, one of the main performance wins of modern graphics APIs. The idea:</p>
+
+<ul>
+  <li><strong>Begin</strong> tells the GPU "this resource is going to transition — start flushing/invalidating whatever you need." The hardware can overlap that work with unrelated commands that come after Begin.</li>
+  <li><strong>End</strong> tells the GPU "the transition must be complete now, because the next commands depend on it." If the GPU has already finished the flush, End is cheap.</li>
+</ul>
+
+<p>Putting unrelated work between Begin and End lets the barrier's latency hide behind real work. Squashing them together (Begin immediately followed by End) falls back to a regular non-split barrier.</p>
+
+<div class="callout src">
+<strong>Where to look:</strong> the two commands are <code>FRHICommandBeginTransitions</code> and <code>FRHICommandEndTransitions</code> in <code>RHICommandList.h</code>. Their <code>Execute()</code> paths call the backend's <code>RHIBeginTransitions</code> / <code>RHIEndTransitions</code>, which ultimately emit native barriers. Cleanup bookkeeping uses atomic state on <code>FRHITransition</code> (<code>MarkBegin</code>/<code>MarkEnd</code> in <code>RHITransition.h</code>).
+</div>
+
+<h3>What goes in Begin vs End, and where they belong</h3>
+<p>Begin and End both receive the <strong>same transition object</strong>. You call <code>RHICreateTransition</code> once to describe the state change, then hand that pointer to both commands. Begin is "start the transition"; End is "the transition must be complete now." Neither is a half-description — the declaration lives in the transition object itself.</p>
+
+<div class="panel">
+<div class="mermaid">
+flowchart TB
+    W1["&hellip; writer pass &hellip;<br/>final use of R in OLD state"]:::writer
+    BEG["RHIBeginTransitions(T)<br/><em>after</em> last OLD-state use"]:::barrier
+    GAP["unrelated work<br/>(draws/dispatches that don't touch R)"]:::work
+    END["RHIEndTransitions(T)<br/><em>before</em> first NEW-state use"]:::barrier
+    R1["first use of R in NEW state<br/>&hellip; reader pass &hellip;"]:::reader
+
+    W1 --> BEG --> GAP --> END --> R1
+
+    classDef writer fill:#4a2e15,stroke:#f0883e,color:#e6edf3
+    classDef barrier fill:#3b2a55,stroke:#d2a8ff,color:#e6edf3
+    classDef work fill:#252d38,stroke:#8b949e,color:#e6edf3
+    classDef reader fill:#1d3f1f,stroke:#7ee787,color:#e6edf3
+</div>
+</div>
+
+<div class="two-col">
+  <div class="fix">
+    <span class="tag">Placement rule 1</span>
+    <h3>Begin goes <em>after</em> the last OLD-state use</h3>
+    <p>Emit it as early as you know the resource won't be used in the before-state again. Earlier Begin = more room for the barrier's latency to overlap with other work.</p>
+  </div>
+  <div class="fix b">
+    <span class="tag">Placement rule 2</span>
+    <h3>End goes <em>before</em> the first NEW-state use</h3>
+    <p>This one is strict. If End comes after the first new-state use, that use sees stale data, wrong layout, or uncoalesced caches &mdash; the classic barrier bug.</p>
+  </div>
+</div>
+
+<div class="callout key">
+<strong>The gap between Begin and End is where the win lives.</strong> Anything that doesn't touch the transitioning resource is fair game &mdash; unrelated draws, dispatches, copies, other transitions. The larger the gap, the more of the barrier's flush/decompress/layout-change cost the GPU can hide behind real work. If Begin and End land adjacent (no unrelated work between them), most backends collapse them into a single full barrier &mdash; no worse than no split, but no better either.
+</div>
+
+<div class="callout">
+<strong>In practice you rarely place these yourself.</strong> RDG sees the whole frame's pass graph, so it can place Begin right after the last writer, End right before the first reader, and use the passes in between as the hiding gap. Hand-placing Begin/End correctly across a frame is fiddly &mdash; let RDG do it unless you have a specific reason not to.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="subres">5. Per-subresource granularity</h2>
+<p>A transition doesn't have to move an entire resource — it can target a specific mip, array slice, or aspect (depth vs stencil).</p>
+
+<div class="panel">
+<div class="mermaid">
+flowchart TB
+    T["Texture2D array<br/>6 slices, 8 mips each"]:::res
+    subgraph S1 ["slice 0"]
+      M0a["mip 0 &mdash; RTV"]:::rtv
+      M1a["mip 1+ &mdash; SRV"]:::srv
+    end
+    subgraph S2 ["slice 1"]
+      M0b["mip 0+ &mdash; SRV"]:::srv
+    end
+    subgraph S3 ["slices 2-5"]
+      Mx["all mips &mdash; UAV"]:::uav
+    end
+    T --> S1 & S2 & S3
+
+    classDef res fill:#252d38,stroke:#8b949e,color:#e6edf3
+    classDef rtv fill:#4a2e15,stroke:#f0883e,color:#e6edf3
+    classDef srv fill:#1d3f1f,stroke:#7ee787,color:#e6edf3
+    classDef uav fill:#3b2a55,stroke:#d2a8ff,color:#e6edf3
+</div>
+</div>
+
+<p>This matters for pipelines like cascaded shadow maps (different mips rendered in different passes), mip generation (cascading writes-then-reads), or when you're reading from mip N while writing to mip N+1.</p>
+
+<div class="callout">
+<strong>The default is "whole resource"</strong> — a convenience value (<code>kAllSubresources</code>) means every subresource at once. Use it when there's no advantage to being finer; use explicit ranges when different subresources are in genuinely different states at the same time.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="xpipe">6. Cross-pipe transitions — graphics ↔ async compute</h2>
+<p>A transition can span <strong>different pipelines</strong>, not just different states. "This UAV was written by async compute, now I want to read it from the pixel shader" needs more than a cache flush — it needs cross-queue synchronisation so the graphics queue doesn't race ahead.</p>
+
+<div class="panel">
+<div class="mermaid">
+flowchart LR
+    AC["async compute:<br/>wrote UAV"]:::ac
+    F["queue fence /<br/>semaphore / event"]:::fence
+    GFX["graphics:<br/>will sample as SRV"]:::gfx
+
+    AC --> F --> GFX
+
+    classDef ac fill:#4a2e15,stroke:#f0883e,color:#e6edf3
+    classDef fence fill:#3b2a55,stroke:#d2a8ff,color:#e6edf3
+    classDef gfx fill:#1d3f1f,stroke:#7ee787,color:#e6edf3
+</div>
+</div>
+
+<p>When the source and destination <code>ERHIPipeline</code> flags differ, the RHI emits a queue fence (D3D12), semaphore (Vulkan), or platform equivalent so the consumer waits for the producer. The renderer can opt out with the <code>NoFence</code> flag when it's managing synchronisation itself.</p>
+
+<div class="callout key">
+<strong>State decay:</strong> an <code>AllowDecayPipelines</code> flag lets a resource that went "Graphics | AsyncCompute" transition back to "Graphics" without another explicit fence, on the assumption the async work has already been synchronised elsewhere. It's the kind of optimisation RDG emits automatically — you don't normally touch it by hand.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="driver">7. How a transition reaches the driver</h2>
+<p>Each platform backend translates <code>FRHITransition</code> into its own native barrier calls. The RHI-layer record is the same everywhere; only the emission differs.</p>
+
+<table>
+  <thead>
+    <tr><th>Backend</th><th>Native call</th><th>Source pointer</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>D3D12 (legacy)</td>
+      <td><code>ID3D12GraphicsCommandList::ResourceBarrier</code></td>
+      <td><code>D3D12RHI/Private/D3D12LegacyBarriers.cpp</code></td>
+    </tr>
+    <tr>
+      <td>D3D12 (enhanced)</td>
+      <td><code>ID3D12GraphicsCommandList7::Barrier</code></td>
+      <td><code>D3D12RHI/Private/D3D12EnhancedBarriers.cpp</code></td>
+    </tr>
+    <tr>
+      <td>Vulkan</td>
+      <td><code>vkCmdPipelineBarrier2KHR</code> / <code>VkSemaphore</code>, <code>VkEvent</code></td>
+      <td><code>VulkanRHI/Private/VulkanBarriers.cpp</code></td>
+    </tr>
+    <tr>
+      <td>Other consoles</td>
+      <td>Platform-specific (NVN, AGC, etc.)</td>
+      <td>Under <code>Engine/Platforms/*/Source/Runtime/</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Where state tracking lives</h3>
+<p>The RHI layer is thin — it records the declared transition but doesn't decide which native barriers are strictly necessary. That decision is per-backend:</p>
+<ul>
+  <li><strong>D3D12 legacy</strong> tracks per-subresource state internally and emits barriers only for actual state differences.</li>
+  <li><strong>D3D12 enhanced</strong> and <strong>Vulkan</strong> translate each transition's access flags to stage/access masks on the fly, using the API's built-in access-based barrier semantics.</li>
+  <li><strong>Consoles</strong> often have their own mini state-tracker that reflects hardware-specific compression formats and cache behaviour.</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="implicit">8. What the RHI does NOT do for you</h2>
+<p>The RHI transition system is <strong>explicit</strong>. It won't silently fix hazards — if you read a resource as an SRV without having transitioned it out of its previous state, you'll hit validation errors (or, worse, platform-specific corruption).</p>
+
+<div class="two-col">
+  <div class="fix">
+    <span class="tag">Your job</span>
+    <h3>Explicit declarations</h3>
+    <ul>
+      <li>Every state change between passes — even if "obvious."</li>
+      <li>Cross-queue sync when two pipes share a resource.</li>
+      <li>Per-subresource ranges when different mips/slices diverge.</li>
+      <li>Wrapping each transition with Begin/End around the work that depends on it.</li>
+    </ul>
+  </div>
+  <div class="fix b">
+    <span class="tag">The RHI's job</span>
+    <h3>Choosing the native barriers</h3>
+    <ul>
+      <li>Converting access pairs into cache flushes, decompresses, layout changes.</li>
+      <li>Coalescing multiple transition infos in a single Begin/End batch into the fewest native calls.</li>
+      <li>Inserting cross-queue fences when pipelines differ.</li>
+      <li>Applying platform-specific workarounds when state combos need them.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="callout warn">
+<strong>Initial state</strong> — a resource has a default access at creation (determined by <code>RHIGetDefaultResourceState</code>). Your first transition must correctly name that state as the "before" — no guessing. Getting it wrong on D3D12 legacy backends is a common source of debug-layer errors.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="aliasing">9. Aliasing barriers — a different beast</h2>
+<p>When a transient-resource allocator reuses the same physical memory for resource A (now finished) and resource B (about to start), the GPU needs to know the old tile-cache contents belonged to a different resource. That's an <em>aliasing barrier</em> — related to transitions, but structurally separate.</p>
+
+<p>The RHI's aliasing-barrier machinery lives on <code>FRHITransientAliasingInfo</code> (acquire/discard actions) and travels alongside regular transitions through the same Begin/End commands. Conceptually:</p>
+<ul>
+  <li><strong>Access transitions</strong> — "same resource, different state."</li>
+  <li><strong>Aliasing barriers</strong> — "same memory, different resource."</li>
+</ul>
+<p>You'll rarely author these by hand; the transient resource allocator emits them automatically.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="rdg">10. Who actually writes transitions (hint: not you)</h2>
+<p>In practice most renderers never call <code>RHIBeginTransitions</code> directly. They describe resources and access per pass in the <strong>Render Dependency Graph (RDG)</strong>, and RDG emits transitions for them.</p>
+
+<div class="panel">
+<div class="mermaid">
+flowchart TB
+    P["Pass author:<br/>&lsquo;this pass reads A as SRV,<br/>writes B as UAV&rsquo;"]:::rt
+    RDG["RDG<br/>per-frame dependency graph"]:::rdg
+    T["FRHITransition batches<br/>emitted at pass boundaries"]:::transition
+    B["Backend barriers<br/>in native command buffer"]:::backend
+
+    P --> RDG --> T --> B
+
+    classDef rt fill:#1b3a5c,stroke:#58a6ff,color:#e6edf3
+    classDef rdg fill:#1d3f1f,stroke:#7ee787,color:#e6edf3
+    classDef transition fill:#3b2a55,stroke:#d2a8ff,color:#e6edf3
+    classDef backend fill:#4a2e15,stroke:#f0883e,color:#e6edf3
+</div>
+</div>
+
+<p>RDG knows which pass reads what and which writes what, so it can schedule transitions optimally — batching them, splitting Begin/End across unrelated passes for maximum overlap, and coalescing redundant state changes. You <em>can</em> still hand-author transitions at the RHI layer when you need something RDG can't express, but that's the exception.</p>
+
+<div class="callout src">
+<strong>Where to look:</strong> <code>FRDGBarrierBatchBegin::CreateTransition</code> and friends in <code>RenderCore/Public/RenderGraphPass.h</code> are where RDG turns per-pass access declarations into RHI transitions.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="mental">11. The mental model</h2>
+
+<pre>  Renderer declares per-pass resource access
+            │
+            ▼
+     RDG schedules transitions
+            │
+            ▼
+   FRHITransition   (platform-agnostic record:
+            │       resource, from-state, to-state,
+            │       from-pipe, to-pipe, subresource range)
+            │
+            ▼
+   RHIBeginTransitions ──── work that uses new state ────► RHIEndTransitions
+            │                                                      │
+            ▼                                                      ▼
+   backend barrier code consults access pair + platform state      barrier completes
+            │
+            ▼
+   Native barrier call      (ResourceBarrier / vkCmdPipelineBarrier /
+   in command buffer         platform equivalent — maybe zero calls
+                             if no barrier is actually needed)</pre>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2 id="tldr">12. One sentence</h2>
+<blockquote class="quote">
+An RHI transition is a platform-agnostic "this resource is moving from state A to state B" declaration, split into Begin/End phases around the work that depends on the new state, that each backend translates into whatever native barriers — cache flushes, layout changes, queue fences — the underlying GPU actually needs.
+</blockquote>
+
+<footer>
+  Companion to <code>rhi-parallel-translate-overview.html</code>. An introduction, not a reference &mdash; specifics live in the source under <code>Engine/Source/Runtime/RHI/</code>, <code>Engine/Source/Runtime/RenderCore/</code>, and per-platform backends under <code>Engine/Source/Runtime/D3D12RHI/</code>, <code>VulkanRHI/</code>, <code>Engine/Platforms/*/Source/Runtime/</code>.
+</footer>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      darkMode: true,
+      background: '#1b222c',
+      primaryColor: '#1b3a5c',
+      primaryTextColor: '#e6edf3',
+      primaryBorderColor: '#58a6ff',
+      lineColor: '#8b949e',
+      fontSize: '14px'
+    },
+    flowchart: { curve: 'basis', padding: 20 }
+  });
+</script>
+
+</body>
+</html>
